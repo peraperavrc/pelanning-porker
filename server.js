@@ -414,6 +414,7 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
+const PORT = process.env.PORT || 3000;
 // Start server
 server.listen(PORT, () => {
     console.log(`MetaPoker server running on port ${PORT}`);
