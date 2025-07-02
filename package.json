@@ -11,6 +11,9 @@
     "lint": "eslint .",
     "format": "prettier --write ."
   },
+  "engines": {
+    "node": "v16.14.2"
+  },
   "keywords": [
     "metaverse",
     "planning-poker",
