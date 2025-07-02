@@ -108,7 +108,7 @@ class MetaPoker {
     }
 
     generatePlayerId() {
-        return 'player_' + Math.random().toString(36).substr(2, 9);
+        return 'player_' + Math.random().toString(36).substring(2, 11);
     }
 
     initSocket() {
@@ -174,6 +174,10 @@ class MetaPoker {
 
         this.socket.on('timer-update', (data) => {
             this.updateTimer(data.timeLeft);
+        });
+
+        this.socket.on('player-moved', (data) => {
+            this.updatePlayerPosition(data.playerId, data.position, data.rotation);
         });
     }
 
@@ -295,7 +299,14 @@ class MetaPoker {
         
         const avatar = document.createElement('a-entity');
         avatar.setAttribute('id', `avatar-${playerData.playerId}`);
-        avatar.setAttribute('position', `${x} 0 ${z}`);
+        
+        // Use server position if available, otherwise use calculated position
+        const serverPos = playerData.position;
+        if (serverPos && playerData.playerId !== this.playerId) {
+            avatar.setAttribute('position', `${serverPos.x} ${serverPos.y} ${serverPos.z}`);
+        } else {
+            avatar.setAttribute('position', `${x} 0 ${z}`);
+        }
         
         // Simple avatar representation
         const head = document.createElement('a-sphere');
@@ -344,6 +355,9 @@ class MetaPoker {
         playerListDiv.className = 'player-list';
         playerListDiv.innerHTML = '<h4>プレイヤー</h4>';
         document.body.appendChild(playerListDiv);
+
+        // Setup position tracking
+        this.setupPositionTracking();
     }
 
     updateStatus(text, type) {
@@ -403,6 +417,52 @@ class MetaPoker {
                 break;
             default:
                 console.log('Unknown admin action:', action);
+        }
+    }
+
+    setupPositionTracking() {
+        const camera = document.getElementById('camera');
+        if (!camera) return;
+
+        let lastPosition = { x: 0, y: 0, z: 0 };
+        let lastRotation = { x: 0, y: 0, z: 0 };
+
+        // Track position changes
+        setInterval(() => {
+            if (!this.socket || !this.playerId) return;
+
+            const position = camera.getAttribute('position');
+            const rotation = camera.getAttribute('rotation');
+
+            if (!position || !rotation) return;
+
+            // Check if position has changed significantly
+            const posChanged = Math.abs(position.x - lastPosition.x) > 0.1 ||
+                              Math.abs(position.y - lastPosition.y) > 0.1 ||
+                              Math.abs(position.z - lastPosition.z) > 0.1;
+
+            const rotChanged = Math.abs(rotation.x - lastRotation.x) > 5 ||
+                              Math.abs(rotation.y - lastRotation.y) > 5 ||
+                              Math.abs(rotation.z - lastRotation.z) > 5;
+
+            if (posChanged || rotChanged) {
+                this.socket.emit('player-move', {
+                    playerId: this.playerId,
+                    position: position,
+                    rotation: rotation
+                });
+
+                lastPosition = { ...position };
+                lastRotation = { ...rotation };
+            }
+        }, 100); // Check every 100ms
+    }
+
+    updatePlayerPosition(playerId, position, rotation) {
+        const avatar = document.getElementById(`avatar-${playerId}`);
+        if (avatar && playerId !== this.playerId) {
+            avatar.setAttribute('position', `${position.x} ${position.y} ${position.z}`);
+            avatar.setAttribute('rotation', `${rotation.x} ${rotation.y} ${rotation.z}`);
         }
     }
 }
