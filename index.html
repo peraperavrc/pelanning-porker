@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>MetaPoker - Metaverse Planning Poker</title>
+    <meta name="description" content="Planning Poker in Metaverse">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/metapoker.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>MetaPoker へようこそ</h2>
+            <input type="text" id="playerName" placeholder="ニックネームを入力" maxlength="20">
+            <button onclick="joinRoom()">ルームに参加</button>
+        </div>
+    </div>
+
+    <!-- VR Scene -->
+    <a-scene vr-mode-ui="enabled: true" embedded style="height: 100vh; width: 100vw;">
+        <!-- Assets -->
+        <a-assets>
+            <a-mixin id="card" 
+                     geometry="primitive: plane; width: 1; height: 1.4" 
+                     material="color: #ffffff; opacity: 0.9"
+                     position="0 0 0"
+                     rotation="0 0 0">
+            </a-mixin>
+        </a-assets>
+
+        <!-- Environment -->
+        <a-sky color="#87CEEB"></a-sky>
+        <a-plane position="0 -1 -10" rotation="-90 0 0" width="20" height="20" color="#4CC3D9" opacity="0.7"></a-plane>
+        
+        <!-- Lighting -->
+        <a-light type="ambient" color="#404040"></a-light>
+        <a-light type="point" position="2 4 4" color="#ffffff"></a-light>
+
+        <!-- Story Board -->
+        <a-text id="storyBoard" 
+                value="ストーリー: ログイン機能の実装" 
+                position="0 3 -5" 
+                align="center" 
+                color="#333333"
+                scale="2 2 2">
+        </a-text>
+
+        <!-- Timer -->
+        <a-text id="timer" 
+                value="時間: 00:00" 
+                position="0 2.5 -5" 
+                align="center" 
+                color="#666666"
+                scale="1.5 1.5 1.5">
+        </a-text>
+
+        <!-- Planning Poker Cards (arranged in a circle) -->
+        <a-entity id="cardContainer" position="0 1.5 -5">
+            <!-- Card 1 -->
+            <a-entity id="card-1" 
+                      mixin="card"
+                      position="-3 0 0"
+                      class="poker-card"
+                      data-value="1">
+                <a-text value="1" position="0 0 0.01" align="center" color="#000000"></a-text>
+            </a-entity>
+            
+            <!-- Card 2 -->
+            <a-entity id="card-2" 
+                      mixin="card"
+                      position="-2 0 0"
+                      class="poker-card"
+                      data-value="2">
+                <a-text value="2" position="0 0 0.01" align="center" color="#000000"></a-text>
+            </a-entity>
+            
+            <!-- Card 3 -->
+            <a-entity id="card-3" 
+                      mixin="card"
+                      position="-1 0 0"
+                      class="poker-card"
+                      data-value="3">
+                <a-text value="3" position="0 0 0.01" align="center" color="#000000"></a-text>
+            </a-entity>
+            
+            <!-- Card 5 -->
+            <a-entity id="card-5" 
+                      mixin="card"
+                      position="0 0 0"
+                      class="poker-card"
+                      data-value="5">
+                <a-text value="5" position="0 0 0.01" align="center" color="#000000"></a-text>
+            </a-entity>
+            
+            <!-- Card 8 -->
+            <a-entity id="card-8" 
+                      mixin="card"
+                      position="1 0 0"
+                      class="poker-card"
+                      data-value="8">
+                <a-text value="8" position="0 0 0.01" align="center" color="#000000"></a-text>
+            </a-entity>
+            
+            <!-- Card 13 -->
+            <a-entity id="card-13" 
+                      mixin="card"
+                      position="2 0 0"
+                      class="poker-card"
+                      data-value="13">
+                <a-text value="13" position="0 0 0.01" align="center" color="#000000"></a-text>
+            </a-entity>
+            
+            <!-- Card 21 -->
+            <a-entity id="card-21" 
+                      mixin="card"
+                      position="3 0 0"
+                      class="poker-card"
+                      data-value="21">
+                <a-text value="21" position="0 0 0.01" align="center" color="#000000"></a-text>
+            </a-entity>
+            
+            <!-- Card ? -->
+            <a-entity id="card-unknown" 
+                      mixin="card"
+                      position="4 0 0"
+                      class="poker-card"
+                      data-value="?">
+                <a-text value="?" position="0 0 0.01" align="center" color="#000000"></a-text>
+            </a-entity>
+        </a-entity>
+
+        <!-- Player Avatars Container -->
+        <a-entity id="avatarContainer">
+            <!-- Players will be dynamically added here -->
+        </a-entity>
+
+        <!-- Vote Results Display -->
+        <a-entity id="voteResults" 
+                  position="0 0.5 -5" 
+                  visible="false">
+            <a-text id="resultsText" 
+                    value="投票結果:" 
+                    position="0 0 0" 
+                    align="center" 
+                    color="#333333"
+                    scale="1.5 1.5 1.5">
+            </a-text>
+        </a-entity>
+
+        <!-- Camera (Player View) -->
+        <a-entity id="cameraRig" position="0 1.6 3">
+            <a-camera id="camera" 
+                      look-controls="enabled: true" 
+                      wasd-controls="enabled: true"
+                      cursor="rayOrigin: mouse">
+                <a-cursor color="#ffffff" raycaster="objects: .poker-card"></a-cursor>
+            </a-camera>
+        </a-entity>
+    </a-scene>
+</body>
+</html>
