@@ -49,6 +49,10 @@ class GameRoom {
             this.votes.set(playerId, vote);
             const player = this.players.get(playerId);
             player.hasVoted = true;
+            // Start voting if not already started
+            if (this.gameState === 'waiting') {
+                this.gameState = 'voting';
+            }
             console.log(`Vote cast: ${player.playerName} voted ${vote}`);
             return true;
         }
@@ -185,7 +189,8 @@ io.on('connection', (socket) => {
     socket.on('cast-vote', (data) => {
         const { playerId, vote } = data;
         
-        if (gameRoom.gameState !== 'voting') {
+        // Allow voting in waiting state to start the game
+        if (gameRoom.gameState !== 'voting' && gameRoom.gameState !== 'waiting') {
             socket.emit('error', { message: '投票期間ではありません' });
             return;
         }
@@ -193,10 +198,11 @@ io.on('connection', (socket) => {
         const success = gameRoom.castVote(playerId, vote);
         
         if (success) {
-            // Notify all players about the vote (without revealing the actual vote)
+            // Notify all players about the vote and game state change
             io.to('game-room').emit('vote-cast', {
                 playerId,
-                players: gameRoom.getPlayersArray()
+                players: gameRoom.getPlayersArray(),
+                gameState: gameRoom.gameState
             });
 
             // Check if all players have voted

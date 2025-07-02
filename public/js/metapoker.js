@@ -52,15 +52,35 @@ class MetaPoker {
             
             // Hover effects
             card.addEventListener('mouseenter', (e) => {
-                if (this.gameState === 'voting') {
+                if (this.gameState === 'voting' || this.gameState === 'waiting') {
                     card.setAttribute('material', 'color: #ffeb3b; opacity: 0.9');
                 }
             });
             
             card.addEventListener('mouseleave', (e) => {
-                if (this.gameState === 'voting' && this.currentVote !== card.getAttribute('data-value')) {
+                if ((this.gameState === 'voting' || this.gameState === 'waiting') && this.currentVote !== card.getAttribute('data-value')) {
                     card.setAttribute('material', 'color: #ffffff; opacity: 0.9');
                 }
+            });
+        });
+
+        // Setup admin button events
+        const adminButtons = document.querySelectorAll('.admin-button');
+        adminButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const action = button.getAttribute('data-action');
+                this.handleAdminAction(action);
+            });
+            
+            // Hover effects for admin buttons
+            button.addEventListener('mouseenter', (e) => {
+                const currentColor = button.getAttribute('material').color;
+                button.setAttribute('material', `color: ${currentColor}; opacity: 0.8`);
+            });
+            
+            button.addEventListener('mouseleave', (e) => {
+                const currentColor = button.getAttribute('material').color;
+                button.setAttribute('material', `color: ${currentColor}; opacity: 1`);
             });
         });
     }
@@ -115,6 +135,23 @@ class MetaPoker {
             this.handlePlayerJoined(data);
         });
 
+        this.socket.on('game-state', (data) => {
+            this.gameState = data.gameState || 'waiting';
+            if (data.story) {
+                this.updateStory(data.story);
+            }
+            if (data.players && Array.isArray(data.players)) {
+                this.players.clear();
+                data.players.forEach(player => {
+                    this.players.set(player.playerId || player.socketId, player);
+                });
+                this.updatePlayerList();
+            }
+            if (data.timeLeft) {
+                this.updateTimer(data.timeLeft);
+            }
+        });
+
         this.socket.on('player-left', (data) => {
             this.handlePlayerLeft(data);
         });
@@ -141,8 +178,9 @@ class MetaPoker {
     }
 
     selectCard(value) {
-        if (this.gameState !== 'voting') {
-            return;
+        if (this.gameState !== 'voting' && this.gameState !== 'waiting') {
+            // Allow voting in waiting state to start the game
+            this.gameState = 'voting';
         }
 
         // Update visual selection
@@ -171,7 +209,15 @@ class MetaPoker {
     }
 
     handlePlayerJoined(data) {
-        this.players.set(data.playerId, data);
+        // Update players array properly
+        if (data.players && Array.isArray(data.players)) {
+            this.players.clear();
+            data.players.forEach(player => {
+                this.players.set(player.playerId || player.socketId, player);
+            });
+        } else {
+            this.players.set(data.playerId, data);
+        }
         this.updatePlayerList();
         this.createPlayerAvatar(data);
         console.log(`Player joined: ${data.playerName}`);
@@ -342,6 +388,21 @@ class MetaPoker {
             const seconds = timeLeft % 60;
             const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             timerElement.setAttribute('value', `時間: ${timeString}`);
+        }
+    }
+
+    handleAdminAction(action) {
+        switch(action) {
+            case 'reset':
+                this.socket.emit('reset-game');
+                console.log('Game reset requested');
+                break;
+            case 'reveal':
+                this.socket.emit('admin-reveal-votes');
+                console.log('Vote reveal requested');
+                break;
+            default:
+                console.log('Unknown admin action:', action);
         }
     }
 }

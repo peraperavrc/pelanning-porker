@@ -6,8 +6,8 @@
     <meta name="description" content="Planning Poker in Metaverse">
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/metapoker.js"></script>
-    <link rel="stylesheet" href="css/style.css">
+    <script src="public/js/metapoker.js"></script>
+    <link rel="stylesheet" href="public/css/style.css">
 </head>
 <body>
     <!-- Login Modal -->
@@ -150,13 +150,33 @@
             </a-text>
         </a-entity>
 
+        <!-- Admin Controls -->
+        <a-entity id="adminControls" position="5 2 -5">
+            <a-entity id="resetButton" 
+                      geometry="primitive: box; width: 1.5; height: 0.5; depth: 0.1" 
+                      material="color: #f44336"
+                      position="0 0 0"
+                      class="admin-button"
+                      data-action="reset">
+                <a-text value="リセット" position="0 0 0.06" align="center" color="#ffffff" scale="0.8 0.8 0.8"></a-text>
+            </a-entity>
+            <a-entity id="revealButton" 
+                      geometry="primitive: box; width: 1.5; height: 0.5; depth: 0.1" 
+                      material="color: #2196F3"
+                      position="0 -0.7 0"
+                      class="admin-button"
+                      data-action="reveal">
+                <a-text value="結果表示" position="0 0 0.06" align="center" color="#ffffff" scale="0.8 0.8 0.8"></a-text>
+            </a-entity>
+        </a-entity>
+
         <!-- Camera (Player View) -->
         <a-entity id="cameraRig" position="0 1.6 3">
             <a-camera id="camera" 
                       look-controls="enabled: true" 
                       wasd-controls="enabled: true"
                       cursor="rayOrigin: mouse">
-                <a-cursor color="#ffffff" raycaster="objects: .poker-card"></a-cursor>
+                <a-cursor color="#ffffff" raycaster="objects: .poker-card, .admin-button"></a-cursor>
             </a-camera>
         </a-entity>
     </a-scene>
