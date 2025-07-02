@@ -2,17 +2,20 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+const config = require('./config/config');
+const logger = require('./utils/logger');
+const Validator = require('./utils/validator');
+const ErrorHandler = require('./utils/errorHandler');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: config.server.cors
 });
 
-const PORT = process.env.PORT || 3000;
+// Setup error handlers
+ErrorHandler.createProcessErrorHandlers();
+app.use(ErrorHandler.createExpressErrorHandler());
 
 // Game state management
 class GameRoom {
@@ -20,9 +23,9 @@ class GameRoom {
         this.players = new Map();
         this.votes = new Map();
         this.gameState = 'waiting'; // waiting, voting, revealed
-        this.currentStory = 'デフォルトストーリー: ログイン機能の実装';
+        this.currentStory = config.game.defaultStory;
         this.timer = null;
-        this.timerDuration = 300; // 5 minutes in seconds
+        this.timerDuration = config.game.timerDuration;
         this.timeLeft = 0;
     }
 
@@ -30,9 +33,11 @@ class GameRoom {
         this.players.set(playerId, {
             ...playerData,
             hasVoted: false,
-            socketId: playerData.socketId
+            socketId: playerData.socketId,
+            position: { x: 0, y: 1.6, z: 3 },
+            rotation: { x: 0, y: 0, z: 0 }
         });
-        console.log(`Player added: ${playerData.playerName} (${playerId})`);
+        logger.playerAction(playerId, 'joined', { playerName: playerData.playerName });
     }
 
     removePlayer(playerId) {
@@ -40,7 +45,7 @@ class GameRoom {
         if (player) {
             this.players.delete(playerId);
             this.votes.delete(playerId);
-            console.log(`Player removed: ${player.playerName} (${playerId})`);
+            logger.playerAction(playerId, 'left', { playerName: player.playerName });
         }
     }
 
@@ -125,6 +130,16 @@ class GameRoom {
         this.currentStory = story;
         console.log(`Story updated: ${story}`);
     }
+
+    updatePlayerPosition(playerId, position, rotation) {
+        if (this.players.has(playerId)) {
+            const player = this.players.get(playerId);
+            player.position = position;
+            player.rotation = rotation;
+            return true;
+        }
+        return false;
+    }
 }
 
 // Global game room instance
@@ -154,7 +169,35 @@ io.on('connection', (socket) => {
 
     // Handle player joining room
     socket.on('join-room', (data) => {
-        const { playerId, playerName } = data;
+        try {
+            // Validate input data
+            const dataValidation = Validator.validateSocketData(data, ['playerId', 'playerName']);
+            if (!dataValidation.isValid) {
+                ErrorHandler.handleSocketError(socket, new Error('Invalid join data'), 'join-room validation');
+                return;
+            }
+
+            const { playerId, playerName } = data;
+            
+            // Validate player ID
+            const playerIdValidation = Validator.validatePlayerId(playerId);
+            if (!playerIdValidation.isValid) {
+                ErrorHandler.handleSocketError(socket, new Error(playerIdValidation.errors.join(', ')), 'playerId validation');
+                return;
+            }
+            
+            // Validate and sanitize player name
+            const nameValidation = Validator.validatePlayerName(playerName);
+            if (!nameValidation.isValid) {
+                ErrorHandler.handleSocketError(socket, new Error(nameValidation.errors.join(', ')), 'playerName validation');
+                return;
+            }
+            
+            // Check max players limit
+            if (gameRoom.players.size >= config.game.maxPlayers) {
+                ErrorHandler.handleSocketError(socket, new Error('Room is full'), 'max players exceeded');
+                return;
+            }
         
         // Add player to game room
         gameRoom.addPlayer(playerId, {
@@ -182,12 +225,37 @@ io.on('connection', (socket) => {
             players: gameRoom.getPlayersArray()
         });
 
-        console.log(`Player ${playerName} joined room`);
+            logger.gameEvent('player-joined', { playerId, playerName: nameValidation.sanitized, socketId: socket.id });
+        } catch (error) {
+            ErrorHandler.handleSocketError(socket, error, 'join-room');
+        }
     });
 
     // Handle vote casting
     socket.on('cast-vote', (data) => {
-        const { playerId, vote } = data;
+        try {
+            // Validate input data
+            const dataValidation = Validator.validateSocketData(data, ['playerId', 'vote']);
+            if (!dataValidation.isValid) {
+                ErrorHandler.handleSocketError(socket, new Error('Invalid vote data'), 'cast-vote validation');
+                return;
+            }
+
+            const { playerId, vote } = data;
+            
+            // Validate player ID
+            const playerIdValidation = Validator.validatePlayerId(playerId);
+            if (!playerIdValidation.isValid) {
+                ErrorHandler.handleSocketError(socket, new Error(playerIdValidation.errors.join(', ')), 'cast-vote playerId');
+                return;
+            }
+            
+            // Validate vote
+            const voteValidation = Validator.validateVote(vote);
+            if (!voteValidation.isValid) {
+                ErrorHandler.handleSocketError(socket, new Error(voteValidation.errors.join(', ')), 'cast-vote vote');
+                return;
+            }
         
         // Allow voting in waiting state to start the game
         if (gameRoom.gameState !== 'voting' && gameRoom.gameState !== 'waiting') {
@@ -215,8 +283,11 @@ io.on('connection', (socket) => {
                     summary: calculateVoteSummary(allVotes)
                 });
             }
-        } else {
-            socket.emit('error', { message: '投票に失敗しました' });
+            } else {
+                ErrorHandler.handleSocketError(socket, new Error('Failed to cast vote'), 'cast-vote failed');
+            }
+        } catch (error) {
+            ErrorHandler.handleSocketError(socket, error, 'cast-vote');
         }
     });
 
@@ -262,6 +333,22 @@ io.on('connection', (socket) => {
         }
         
         console.log(`Client disconnected: ${socket.id}`);
+    });
+
+    // Handle player position updates
+    socket.on('player-move', (data) => {
+        const { playerId, position, rotation } = data;
+        
+        const success = gameRoom.updatePlayerPosition(playerId, position, rotation);
+        
+        if (success) {
+            // Broadcast position update to all other players
+            socket.broadcast.to('game-room').emit('player-moved', {
+                playerId,
+                position,
+                rotation
+            });
+        }
     });
 
     // Handle custom events for admin functions
