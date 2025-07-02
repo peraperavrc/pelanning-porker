@@ -1,0 +1,28 @@
+{
+  "install": "npm install",
+  "start": "npm start",
+  "watch": {
+    "ignore": [
+      "\\.git",
+      "node_modules",
+      "README.md",
+      "shrinkwrap.yaml"
+    ],
+    "install": {
+      "include": [
+        "package.json"
+      ]
+    },
+    "restart": {
+      "exclude": [
+        "^public/",
+        "^dist/"
+      ],
+      "include": [
+        "\\.js$",
+        "\\.json"
+      ]
+    },
+    "throttle": 1000
+  }
+}
