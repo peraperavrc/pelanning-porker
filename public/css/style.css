@@ -5,10 +5,26 @@
     box-sizing: border-box;
 }
 
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --success-color: #4CAF50;
+    --error-color: #f44336;
+    --warning-color: #FF9800;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --background-gradient: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --border-radius: 8px;
+    --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
+
 body {
-    font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+    background: var(--background-gradient);
     overflow: hidden;
+    line-height: 1.6;
+    color: var(--text-primary);
 }
 
 /* Login Modal */
@@ -30,8 +46,12 @@ body {
     padding: 40px;
     border-radius: 15px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    min-width: 300px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    min-width: 320px;
+    max-width: 400px;
+    width: 90%;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .modal-content h2 {
@@ -58,13 +78,31 @@ body {
 .modal-content button {
     width: 100%;
     padding: 15px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--background-gradient);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--border-radius);
     font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.modal-content button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.modal-content button:hover::before {
+    left: 100%;
 }
 
 .modal-content button:hover {
@@ -94,12 +132,17 @@ a-scene {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.9);
     color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
     font-size: 14px;
+    font-weight: 600;
     z-index: 100;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .status-connected {
@@ -115,13 +158,27 @@ a-scene {
     position: fixed;
     top: 20px;
     left: 20px;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.9);
     color: white;
-    padding: 15px;
-    border-radius: 8px;
+    padding: 16px;
+    border-radius: var(--border-radius);
     font-size: 14px;
-    min-width: 200px;
+    min-width: 220px;
+    max-width: 300px;
     z-index: 100;
+    box-shadow: var(--box-shadow);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: var(--transition);
+}
+
+.player-list h4 {
+    margin-bottom: 12px;
+    color: var(--primary-color);
+    font-size: 16px;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .player-item {
@@ -137,9 +194,13 @@ a-scene {
 }
 
 .player-status {
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 3px;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: var(--transition);
 }
 
 .voted {
@@ -150,20 +211,166 @@ a-scene {
     background: #FF9800;
 }
 
+/* Loading animation */
+.loading-spinner {
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top: 3px solid var(--primary-color);
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Floating animation for cards */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.floating {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Pulse animation for notifications */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Error message styling */
+.error-message {
+    background: var(--error-color);
+    color: white;
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    margin-bottom: 16px;
+    text-align: center;
+    font-weight: 600;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Success message styling */
+.success-message {
+    background: var(--success-color);
+    color: white;
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    margin-bottom: 16px;
+    text-align: center;
+    font-weight: 600;
+    animation: slideIn 0.3s ease-out;
+}
+
+/* VR/AR mode optimizations */
+@media (display-mode: immersive-vr) {
+    .player-list,
+    .status-indicator {
+        display: none;
+    }
+    
+    .modal-content {
+        font-size: 18px;
+    }
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .modal-content {
         margin: 20px;
-        padding: 30px;
+        padding: 24px;
+        min-width: 280px;
     }
     
     .player-list {
         font-size: 12px;
-        min-width: 150px;
+        min-width: 180px;
+        top: 10px;
+        left: 10px;
+        padding: 12px;
     }
     
     .status-indicator {
         font-size: 12px;
         padding: 8px 12px;
+        top: 10px;
+        right: 10px;
+    }
+    
+    .modal-content h2 {
+        font-size: 20px;
+    }
+    
+    .modal-content input,
+    .modal-content button {
+        font-size: 14px;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .player-list {
+        font-size: 11px;
+        min-width: 160px;
+        max-width: 200px;
+    }
+    
+    .status-indicator {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2),
+       (min-resolution: 192dpi) {
+    .modal-content {
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text-primary: #ffffff;
+        --text-secondary: #cccccc;
+    }
+    
+    .modal-content {
+        background-color: #1a1a1a;
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .modal-content input {
+        background-color: #2a2a2a;
+        color: var(--text-primary);
+        border-color: #444444;
+    }
+    
+    .modal-content input:focus {
+        border-color: var(--primary-color);
+        background-color: #333333;
     }
 }
