@@ -70,7 +70,7 @@ class GameRoom {
             votesArray.push({
                 playerId,
                 vote,
-                playerName: this.players.get(playerId)?.playerName || 'Unknown'
+                playerName: this.players.get(playerId).playerName || 'Unknown'
             });
         });
         return votesArray;

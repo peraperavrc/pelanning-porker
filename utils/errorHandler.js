@@ -27,8 +27,8 @@ class ErrorHandler {
         const errorInfo = {
             errorId,
             context,
-            gameState: gameRoom?.gameState,
-            playerCount: gameRoom?.players?.size,
+            gameState: gameRoom.gameState,
+            playerCount: gameRoom.players.size,
             message: error.message,
             stack: error.stack,
             timestamp: new Date().toISOString()
